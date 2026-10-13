@@ -23,7 +23,7 @@ description: "Use when the user wants to know what will break if they change som
 4. Assess risk and report to user
 ```
 
-> If "Index is stale" → run `npx gitnexus analyze` in terminal.
+> If "Index is stale" → run `"$SKILLSPOKE_CC/ops/indexing/gitnexus-reindex.sh" .` in the terminal, from the repository root.
 
 ## Checklist
 
