@@ -173,8 +173,10 @@ every capability serves the job seeker.
   GraphRAG MCP (`mcp__mcp-graphrag-server__search`) first.
 - **Repository names.** `SkillSpoke-{name}` is the personal-agent app; `shared-{name}` is
   shared across the whole company; `marketing-{name}` is marketing; `employer-{name}` is the
-  employer app. A repo is never deleted: it is deprecated by renaming it `deprecated-{name}`
-  in lowercase, and archived on GitHub 60 days later.
+  employer app. A retired repo is deprecated by renaming it `deprecated-{name}` in lowercase
+  (its pull requests are closed and its local clone is deleted); the owner then deletes it on
+  GitHub, and the steward's record of it goes. Until then it is archived on GitHub 60 days after
+  deprecation.
 
 ### Code quality (this is the product: tier 1)
 
