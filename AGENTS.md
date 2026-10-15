@@ -199,7 +199,7 @@ every capability serves the job seeker.
   tables; services do not share a table unless the owner explicitly says so for that scope.
 - Cross-stack values go through SSM Parameter Store: the producing stack writes the parameter,
   the consuming stack reads it. Never CloudFormation exports or imports.
-- **CDK.** Build every CDK app and stack with `shared-cdk-lib` (import `skillspoke_cdk`):
+- **CDK.** Build every CDK app and stack with `shared-cdk-lib` (import `shared.cdk`):
   `run_app`, `PlatformStack`, `Names`, `ChassisFunction`, `PlatformRestApi`, `PlatformTable`,
   `put_param`; never a copied `lambda_utils.py`. A repository not yet on it moves to it when a
   Task next changes its CDK.
@@ -209,8 +209,19 @@ every capability serves the job seeker.
 
 ### Git flow
 
-- Work happens in a git worktree on a feature branch, never on `main` in the primary working
-  tree. Never commit on `main` and never push to `main`.
+Tier is decided by what a file is, not by the repository that holds it. Tier 1 is the product:
+the code, infrastructure, scripts and CI/CD that would exist if AI did not. Everything that exists
+because of AI is tier 2, wherever it sits: `AGENTS.md`, `CLAUDE.md`, `.claude/`, the agents, skills,
+plugins and the pipeline.
+
+- **Tier 2 files in this repository** (`AGENTS.md` at any depth, `CLAUDE.md`, and everything
+  under `.claude/`): commit directly on `main` in the primary working tree and push. No
+  worktree, branch, pull request, `skillspoke-pr` or CodeRabbit. `CLAUDE.md` is a symlink to
+  `AGENTS.md`: edit `AGENTS.md`. A change that touches both kinds of file is split: the product
+  files follow the rules below, the tier 2 files go directly to `main`.
+- **Product files** (everything else in this repository): work happens in a git worktree on a
+  feature branch, never on `main` in the primary working tree. Never commit product files on
+  `main` and never push them to `main`.
 - Commits: `type(scope): description`, no `Co-Authored-By`.
 - Run `ruff check` on the files you changed before committing.
 - `--no-verify` (and `git commit -n`) is forbidden. When a pre-commit hook fails, fix every
@@ -254,13 +265,4 @@ kept separate.
   `$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json` (`$CLAUDE_CONFIG_DIR` defaults to
   `~/.claude`).
 - **Commands:** the plugin's slash commands, `/agent-teams-workforce:<command>`.
-
-# Agent Teams Workforce host instructions
-
-The canonical orchestrator rules are imported below. They apply to the armed
-orchestrator session in consuming projects, not to bounded subagents or the
-source repository that builds this plugin. See the imported rules for legacy
-project-wide arms and the exact boundaries.
-
-@rules/CLAUDE.md
 <!-- END AGENT TEAMS WORKFORCE -->
