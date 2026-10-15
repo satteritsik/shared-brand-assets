@@ -199,7 +199,7 @@ every capability serves the job seeker.
   tables; services do not share a table unless the owner explicitly says so for that scope.
 - Cross-stack values go through SSM Parameter Store: the producing stack writes the parameter,
   the consuming stack reads it. Never CloudFormation exports or imports.
-- **CDK.** Build every CDK app and stack with `shared-cdk-lib` (import `skillspoke_cdk`):
+- **CDK.** Build every CDK app and stack with `shared-cdk-lib` (import `shared.cdk`):
   `run_app`, `PlatformStack`, `Names`, `ChassisFunction`, `PlatformRestApi`, `PlatformTable`,
   `put_param`; never a copied `lambda_utils.py`. A repository not yet on it moves to it when a
   Task next changes its CDK.
@@ -254,13 +254,4 @@ kept separate.
   `$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json` (`$CLAUDE_CONFIG_DIR` defaults to
   `~/.claude`).
 - **Commands:** the plugin's slash commands, `/agent-teams-workforce:<command>`.
-
-# Agent Teams Workforce host instructions
-
-The canonical orchestrator rules are imported below. They apply to the armed
-orchestrator session in consuming projects, not to bounded subagents or the
-source repository that builds this plugin. See the imported rules for legacy
-project-wide arms and the exact boundaries.
-
-@rules/CLAUDE.md
 <!-- END AGENT TEAMS WORKFORCE -->
