@@ -232,9 +232,7 @@ plugins and the pipeline.
 - The agent that writes a change commits it, pushes the branch and opens the PR with
   `skillspoke-pr`, run inside the branch's worktree. Never `gh pr create`. An unpushed commit
   or a branch with no PR is unfinished work.
-- `skillspoke-pr` arms auto-merge and chains the shepherd, which fixes until checks pass and
-  threads resolve; GitHub auto-merge then merges. Never ask the owner to merge and never merge
-  yourself: find what blocks auto-merge and clear it.
+- PRs merge automatically. Never ask the owner to merge, and never merge yourself.
 
 ### Bash commands
 
