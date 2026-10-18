@@ -69,6 +69,7 @@ class Spec:
     pins: dict[str, str]
     node_pins: dict[str, str]
     cdk_apps: tuple[str, ...]
+    cdk_app_files: frozenset[str]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -151,6 +152,7 @@ def load_spec() -> Spec:
         _string_map(flat_pins, "pins"),
         _string_map(node, "pins.node"),
         _string_list(parsed.get("cdk_apps", []), "cdk_apps"),
+        frozenset(_string_list(parsed.get("cdk_app_files", sorted(CDK_FILES)), "cdk_app_files")),
     )
 
 
@@ -390,20 +392,41 @@ def cdk_app_folder(cdk_json: str) -> Path | None:
 
 
 def apps_for(path: Path, spec: Spec) -> list[str]:
-    """Return the CDK apps an edited file belongs to.
+    """Return the CDK apps a changed file belongs to.
+
+    A file named in the spec's `cdk_app_files` (`cdk.json`, `cdk.context.json` and the dependency
+    files that set the CDK library version) belongs to the apps whose `cdk.json` sits beside it.
 
     Args:
-        path: The edited file.
+        path: The changed file.
         spec: The spec.
 
     Returns:
-        The `cdk.json` paths whose app folder holds the file, or whose folder holds the edited
-        `cdk.json` or `cdk.context.json`.
+        The `cdk.json` paths whose app folder holds the file, or whose folder holds the changed
+        file named in `cdk_app_files`.
 
     """
-    if path.name in CDK_FILES:
+    if path.name in spec.cdk_app_files:
         return [app for app in spec.cdk_apps if (TREE / app).parent.resolve() == path.parent]
     return [app for app in spec.cdk_apps if (folder := cdk_app_folder(app)) is not None and path.is_relative_to(folder)]
+
+
+def apps_for_files(mode: str, files: Sequence[str], spec: Spec) -> list[str]:
+    """Return the CDK apps a set of changed files belongs to, in the spec's order.
+
+    Args:
+        mode: `edit`, `commit` or `all`; `all` takes every app.
+        files: The changed files relative to the tree.
+        spec: The spec.
+
+    Returns:
+        The `cdk.json` paths to check.
+
+    """
+    if mode == "all":
+        return list(spec.cdk_apps)
+    touched: set[str] = {app for rel in files for app in apps_for((TREE / rel).resolve(), spec)}
+    return [app for app in spec.cdk_apps if app in touched]
 
 
 def cdk_nag_check(apps: Sequence[str]) -> list[Outcome]:
@@ -734,7 +757,7 @@ type CheckRunner = Callable[[str, Sequence[str], Spec], list[Outcome]]
 HOOKS: Final[dict[str, tuple[str, CheckRunner]]] = {
     "python-ruff": ("python", ruff_checks),
     "python-mypy": ("python", mypy_check),
-    "cdk-nag": ("cdk", lambda _mode, _files, spec: cdk_nag_check(spec.cdk_apps)),
+    "cdk-nag": ("cdk", lambda mode, files, spec: cdk_nag_check(apps_for_files(mode, files, spec))),
     "ts-eslint": ("typescript", lambda mode, files, spec: eslint_check("typescript", mode, files, spec)),
     "ts-prettier": ("typescript", lambda mode, files, spec: prettier_check("typescript", mode, files, spec)),
     "ts-tsc": ("typescript", lambda mode, files, _spec: tsc_check(mode, files)),

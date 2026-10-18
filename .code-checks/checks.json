@@ -14,5 +14,6 @@
       "prettier": "3.9.10"
     }
   },
-  "cdk_apps": []
+  "cdk_apps": [],
+  "cdk_app_files": []
 }
