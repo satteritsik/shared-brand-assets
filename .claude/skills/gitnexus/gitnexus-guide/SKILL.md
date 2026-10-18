@@ -15,7 +15,7 @@ For any task involving code understanding, debugging, impact analysis, or refact
 2. **Match your task to a skill below** and **read that skill file**
 3. **Follow the skill's workflow and checklist**
 
-> If step 1 warns the index is stale, run `"$SKILLSPOKE_CC/ops/indexing/gitnexus-reindex.sh" .` in the terminal, from the repository root first.
+> Indexes refresh themselves in the background after every commit, merge, checkout and rebase. If step 1 warns the index is stale and `python3 "$SKILLSPOKE_CC/ops/indexing/gitnexus-fleet.py" status` shows no re-index queued for it, run `"$SKILLSPOKE_CC/ops/indexing/gitnexus-reindex.sh" .` in the terminal, from the repository root.
 
 ## Skills
 
@@ -39,6 +39,10 @@ For any task involving code understanding, debugging, impact analysis, or refact
 | `rename`         | Multi-file coordinated rename with confidence-tagged edits               |
 | `cypher`         | Raw graph queries (read `gitnexus://repo/{name}/schema` first)           |
 | `list_repos`     | Discover indexed repos                                                   |
+| `group_list`     | The repository groups and their members (SkillSpoke: `skillspoke`)      |
+| `group_sync`     | Rebuild a group's cross-repository contracts after re-indexing members   |
+
+Cross-repository work: pass `repo: "@skillspoke/<group path>"` to `query` or `impact`, where the group path is the member's clone path under `$SKILLSPOKE_APPS` (for example `personal-agent/SkillSpoke-chat-service`). See `gitnexus-cli` for the group commands.
 
 ## Resources Reference
 

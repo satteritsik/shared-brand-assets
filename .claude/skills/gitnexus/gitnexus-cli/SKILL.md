@@ -23,7 +23,15 @@ Run from the project root. `gitnexus-reindex.sh` parses all source files, builds
 | `--embeddings` | Enable embedding generation for semantic search (off by default) |
 | `--drop-embeddings` | Drop existing embeddings on rebuild. By default, an `analyze` without `--embeddings` preserves them. |
 
-**When to run:** First time in a project, after major code changes, or when `gitnexus://repo/{name}/context` reports the index is stale. In Claude Code, a PostToolUse hook runs `analyze` automatically after `git commit` and `git merge`, preserving embeddings if previously generated.
+**When to run:** Rarely by hand. Every SkillSpoke repository re-indexes itself: a git config hook (`skillspoke-gitnexus`, registered by `polyrepo gitnexus-sync`) queues a background re-index after every commit, merge, checkout and rebase, and the SessionStart hook queues every repository whose index is behind its current commit. Run it by hand when a session-start warning names a failed re-index (after fixing the cause), or when `gitnexus://repo/{name}/context` reports the index is stale and no re-index is queued.
+
+### Fleet status — is every repository indexed?
+
+```bash
+python3 "$SKILLSPOKE_CC/ops/indexing/gitnexus-fleet.py" status
+```
+
+Checks that the GitNexus MCP server answers at the pinned version, that the `skillspoke` group exists, and that every member repository is set up and indexed at its current commit. Prints each problem with the command that fixes it and exits 1 when there is one. Re-index logs and outcomes are in `$SKILLSPOKE_LOGS/gitnexus/`. The same checks run at every session start and are shown to the owner when anything is wrong.
 
 ### status — Check index freshness
 
@@ -70,6 +78,20 @@ Generates repository documentation from the knowledge graph using an LLM. Requir
 ```
 
 Lists all repositories registered in `~/.gitnexus/registry.json`. The MCP `list_repos` tool provides the same information.
+
+### group — Work across repositories
+
+Every SkillSpoke repository is a member of the GitNexus group `skillspoke` (the name is in `ops/indexing/gitnexus-group` of the control repository). A member's group path is its clone's path under `$SKILLSPOKE_APPS`, for example `personal-agent/SkillSpoke-chat-service` or `shared/common/shared-auth-lib`. `polyrepo gitnexus-sync` keeps the membership equal to the steward's repositories; never add or remove members by hand.
+
+```bash
+"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" group list skillspoke              # members
+"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" group status skillspoke            # staleness of the group and its repos
+"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" group query skillspoke "<concept>"  # execution flows across every member
+"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" group impact skillspoke --help     # cross-repository blast radius of a symbol
+"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" group sync skillspoke              # rebuild the cross-repository contracts
+```
+
+The background re-index runs `group sync` after it re-indexes anything. Through MCP, pass `repo: "@skillspoke/<group path>"` to `query` or `impact` to work across repositories from that member; always name the member, because `@skillspoke` alone starts from the first member in the group.
 
 ## After Indexing
 
