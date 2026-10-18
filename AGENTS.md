@@ -3,7 +3,11 @@
 
 This repository is indexed by GitNexus as **shared-brand-assets**. Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> If any GitNexus tool warns the index is stale, run `"$SKILLSPOKE_CC/ops/indexing/gitnexus-reindex.sh" .` in the terminal from the repository root. Run every other GitNexus command through `"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" <command>`; never start GitNexus any other way, because the project pins one version in `ops/indexing/gitnexus-version` of the control repository.
+> The index refreshes itself: a git hook queues a background re-index after every commit, merge, checkout and rebase, and every session start queues any repository that is behind and reports any GitNexus problem to the owner. If a GitNexus tool warns the index is stale and `python3 "$SKILLSPOKE_CC/ops/indexing/gitnexus-fleet.py" status` shows no re-index queued for it, run `"$SKILLSPOKE_CC/ops/indexing/gitnexus-reindex.sh" .` in the terminal from the repository root. Run every other GitNexus command through `"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" <command>`; never start GitNexus any other way, because the project pins one version in `ops/indexing/gitnexus-version` of the control repository.
+
+## Across repositories
+
+Every SkillSpoke repository is in the GitNexus group `skillspoke`, at its clone's path under `$SKILLSPOKE_APPS`. For work that crosses repositories (an API, an event, a shared library), pass `repo: "@skillspoke/<group path>"` to `gitnexus_query` or `gitnexus_impact`, naming this repository's member, its clone path under `$SKILLSPOKE_APPS` (for example `@skillspoke/personal-agent/SkillSpoke-chat-service`); `gitnexus_group_list` lists the members. The CLI commands are in `.claude/skills/gitnexus/gitnexus-cli/SKILL.md`.
 
 ## Always Do
 
