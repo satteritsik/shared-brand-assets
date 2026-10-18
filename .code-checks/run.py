@@ -28,7 +28,7 @@ import subprocess  # ruff: ignore[suspicious-subprocess-import] - every command 
 import sys
 import tempfile
 from collections.abc import Callable
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
@@ -49,6 +49,8 @@ SHELL_SUFFIXES: Final = frozenset({".sh", ".bash"})
 SHELL_SHEBANG: Final = re.compile(r"^#!.*\b(ba)?sh\b")
 CDK_FILES: Final = frozenset({"cdk.json", "cdk.context.json"})
 CONFIG_SUFFIXES: Final = frozenset({".js", ".mjs", ".cjs", ".ts", ".mts", ".cts"})
+TSC_LOCATED: Final = re.compile(r"^(\S.*?)\(\d+,\d+\): (?:error|warning|message) TS\d+:")
+TSC_UNLOCATED: Final = re.compile(r"^(?:error|warning|message) TS\d+:")
 TOOL_TIMEOUT_SECONDS: Final = 600
 EXIT_CLEAN: Final = 0
 EXIT_FINDINGS: Final = 1
@@ -638,23 +640,61 @@ def nearest_tsconfig(path: Path) -> Path | None:
     return next((folder / "tsconfig.json" for folder in folders if (folder / "tsconfig.json").is_file()), None)
 
 
-def _diagnostics_for(output: str, rel: str) -> str:
-    """Keep only the tsc diagnostics that start in one file, with their continuation lines.
+def diagnostic_blocks(output: str) -> list[tuple[str | None, str]]:
+    """Split tsc's output (`--pretty false`) into diagnostics, each with its continuation lines.
 
     Args:
-        output: tsc's output (`--pretty false`).
-        rel: The file's path relative to the tree.
+        output: tsc's output.
 
     Returns:
-        The kept lines.
+        One (file, text) pair per diagnostic: the file it starts in relative to the tree, or None
+        for a diagnostic tied to no file (such as a missing type library).
 
     """
-    kept: list[str] = []
-    keeping = False
+    blocks: list[tuple[str | None, list[str]]] = []
     for line in output.splitlines():
-        keeping = line.startswith(f"{rel}(") or (keeping and line.startswith(" "))
-        kept.extend([line] if keeping else [])
-    return "\n".join(kept)
+        located = TSC_LOCATED.match(line)
+        starts = located is not None or TSC_UNLOCATED.match(line) is not None
+        if starts:
+            blocks.append((located.group(1) if located else None, [line]))
+        if not starts and blocks:
+            blocks[-1][1].append(line)
+    return [(origin, "\n".join(lines)) for origin, lines in blocks]
+
+
+def _is_tsconfig(rel: str) -> bool:
+    """Report whether a path names a TypeScript configuration (`tsconfig*.json`).
+
+    Args:
+        rel: The path.
+
+    Returns:
+        True for a tsconfig file.
+
+    """
+    name = PurePosixPath(rel).name
+    return name.startswith("tsconfig") and name.endswith(".json")
+
+
+def diagnostics_in(outcomes: Iterable[Outcome], files: Sequence[str]) -> str:
+    """Keep the diagnostics that start in the given files, once each.
+
+    A diagnostic tied to no file is kept when one of the files is a tsconfig, since only a
+    configuration change can introduce one.
+
+    Args:
+        outcomes: The tsc outcomes.
+        files: The paths relative to the tree.
+
+    Returns:
+        The kept diagnostics.
+
+    """
+    wanted = frozenset(files)
+    config_changed = any(_is_tsconfig(rel) for rel in files)
+    blocks = [block for outcome in outcomes for block in diagnostic_blocks(outcome.output)]
+    kept = [text for origin, text in blocks if origin in wanted or (origin is None and config_changed)]
+    return "\n".join(dict.fromkeys(kept))
 
 
 def tsc_project(tsconfig: Path) -> Outcome:
@@ -682,25 +722,42 @@ def tsc_project(tsconfig: Path) -> Outcome:
     return run_tool(f"tsc -p {rel}", argv)
 
 
+def tsc_projects() -> list[Path]:
+    """List every TypeScript project in the tree: each tracked `tsconfig.json`.
+
+    Returns:
+        The tsconfig paths.
+
+    """
+    return [TREE / rel for rel in tracked([".json"]) if Path(rel).name == "tsconfig.json"]
+
+
 def tsc_check(mode: str, files: Sequence[str]) -> list[Outcome]:
-    """Type-check TypeScript: at edit time the edited file's project, reporting that file only.
+    """Type-check TypeScript, reporting in edit and commit mode only the files handed in.
+
+    tsc needs the whole program, so each mode checks whole projects: the edited file's project
+    at edit time, every project at commit and over the tree. At edit and commit time only the
+    diagnostics that start in the given files are reported, so findings elsewhere never block.
 
     Args:
         mode: `edit`, `commit` or `all`.
-        files: The edited file (edit mode).
+        files: The edited file (edit mode) or the staged files (commit mode).
 
     Returns:
         The outcomes.
 
     """
-    if mode != "edit":
-        return [tsc_project(TREE / rel) for rel in tracked([".json"]) if Path(rel).name == "tsconfig.json"]
-    tsconfig = nearest_tsconfig(TREE / files[0])
-    if tsconfig is None:
+    if mode == "all":
+        return [tsc_project(tsconfig) for tsconfig in tsc_projects()]
+    if not files:
         return []
-    outcome = tsc_project(tsconfig)
-    own = _diagnostics_for(outcome.output, files[0])
-    return [Outcome(outcome.check, clean=not own, output=own)]
+    nearest = nearest_tsconfig(TREE / files[0])
+    edited_project = [nearest] if nearest is not None else []
+    projects = tsc_projects() if mode == "commit" else edited_project
+    outcomes = [tsc_project(project) for project in projects]
+    unrun = [outcome for outcome in outcomes if not outcome.clean and not diagnostic_blocks(outcome.output)]
+    own = diagnostics_in(outcomes, files)
+    return [*unrun, Outcome(f"tsc ({mode})", clean=not own, output=own)] if outcomes else []
 
 
 # ------------------------------------------------------------------------------------------
