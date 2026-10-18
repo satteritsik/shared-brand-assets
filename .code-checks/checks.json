@@ -1,0 +1,18 @@
+{
+  "stacks": [],
+  "pins": {
+    "ruff": "0.17.1",
+    "mypy": "2.4.0",
+    "shellcheck-py": "0.11.0.1",
+    "pre-commit": "4.7.0",
+    "node": {
+      "eslint": "10.13.0",
+      "@eslint/js": "10.0.1",
+      "globals": "17.13.0",
+      "typescript-eslint": "8.71.2",
+      "typescript": "6.0.3",
+      "prettier": "3.9.10"
+    }
+  },
+  "cdk_apps": []
+}
