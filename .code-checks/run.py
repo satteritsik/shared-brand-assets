@@ -11,6 +11,11 @@ caller checks with one definition. Usage:
 Each check runs in the repository's own environment: Python tools against the repository's
 `.venv` (the primary working tree's when a worktree has none), Node tools from its
 `node_modules`. Exit status: 0 clean, 1 findings, 2 usage error. Findings go to stdout.
+
+In edit mode, when the environment variable `CODE_CHECKS_SUMMARY` names a file, the runner also
+writes there a JSON list with one entry per check that ran: the check, its tool, whether it was
+clean, and the rule id of each finding (`unparsed` when a check failed with output no rule pattern
+recognises). The edit hook reads it to log what agents get wrong on their first write.
 """
 
 from __future__ import annotations
@@ -56,6 +61,20 @@ EXIT_CLEAN: Final = 0
 EXIT_FINDINGS: Final = 1
 EXIT_USAGE: Final = 2
 FINDINGS_EXIT_CODES: Final = frozenset({1})
+SUMMARY_ENV: Final = "CODE_CHECKS_SUMMARY"
+UNPARSED_RULE: Final = "unparsed"
+FORMAT_RULE: Final = "format"
+TOOLS: Final = ("ruff", "mypy", "eslint", "prettier", "tsc", "shellcheck", "cdk-nag")
+RULE_PATTERNS: Final[dict[str, re.Pattern[str]]] = {
+    "ruff check": re.compile(r"^([A-Z]{1,4}\d{1,4}|[a-z][a-z0-9]*(?:-[a-z0-9]+)+):? ", re.MULTILINE),
+    "ruff format": re.compile(r"^(?:unformatted: |Would reformat: )", re.MULTILINE),
+    "mypy": re.compile(r": error: .*\[([a-z0-9-]+)\]$", re.MULTILINE),
+    "eslint": re.compile(r"^\s+\d+:\d+\s+(?:error|warning)\s+.*?\s{2,}(\S+)$", re.MULTILINE),
+    "prettier": re.compile(r"^\[warn\] (?!Code style issues)\S", re.MULTILINE),
+    "tsc": re.compile(r"(?:error|warning) (TS\d+):"),
+    "shellcheck": re.compile(r"\^[-^]*\s(SC\d{4})\b"),
+    "cdk-nag": re.compile(r"^.+?: [A-Z]+ (\S+) ", re.MULTILINE),
+}
 NODE_TOOLCHAIN: Final = ("eslint", "@eslint/js", "globals", "typescript-eslint", "typescript", "prettier")
 
 
@@ -903,6 +922,62 @@ def report(outcomes: Iterable[Outcome]) -> int:
     return EXIT_FINDINGS if failed else EXIT_CLEAN
 
 
+def tool_of(check: str) -> str:
+    """Name the tool a check runs.
+
+    Args:
+        check: The check's name, or the hook id of a check that could not run.
+
+    Returns:
+        The first of `TOOLS` the name contains, else the name itself.
+
+    """
+    return next((tool for tool in TOOLS if tool in check), check)
+
+
+def rule_ids(outcome: Outcome) -> list[str]:
+    """Read the rule id of every finding in a check's output.
+
+    Args:
+        outcome: The check's outcome.
+
+    Returns:
+        One id per finding (`format` for a formatter finding); `unparsed` alone when the check
+        failed and no finding was recognised; empty when it was clean.
+
+    """
+    if outcome.clean:
+        return []
+    pattern = next((found for key, found in RULE_PATTERNS.items() if outcome.check.startswith(key)), None)
+    if pattern is None:
+        pattern = RULE_PATTERNS.get(tool_of(outcome.check))
+    matches = list(pattern.finditer(outcome.output)) if pattern is not None else []
+    found = [match.group(1) if match.groups() else FORMAT_RULE for match in matches]
+    return found or [UNPARSED_RULE]
+
+
+def write_summary(outcomes: Sequence[Outcome]) -> None:
+    """Write the per-check summary to the file `CODE_CHECKS_SUMMARY` names, when it names one.
+
+    A failure to write is reported on stderr and never changes the checks' result.
+
+    Args:
+        outcomes: The outcomes of the edit checks.
+
+    """
+    target = os.environ.get(SUMMARY_ENV)
+    if not target:
+        return
+    entries = [
+        {"check": outcome.check, "tool": tool_of(outcome.check), "clean": outcome.clean, "rules": rule_ids(outcome)}
+        for outcome in outcomes
+    ]
+    try:
+        Path(target).write_text(json.dumps(entries), encoding="utf-8")
+    except OSError as error:
+        sys.stderr.write(f"writing the check summary to {target} failed: {error}\n")
+
+
 def parse_arguments(argv: Sequence[str]) -> argparse.Namespace:
     """Parse the command line.
 
@@ -940,7 +1015,9 @@ def main(argv: Sequence[str]) -> int:
         sys.stdout.write(f"{error}\n")
         return EXIT_USAGE
     if arguments.mode == "edit":
-        return report(run_edit(arguments.file, spec))
+        outcomes = run_edit(arguments.file, spec)
+        write_summary(outcomes)
+        return report(outcomes)
     if arguments.mode == "commit":
         return report(run_hooks([arguments.hook], "commit", arguments.files, spec))
     stacks = frozenset(arguments.stacks) or spec.stacks
