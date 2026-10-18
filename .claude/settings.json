@@ -55,6 +55,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$SKILLSPOKE_CC/.claude/hooks/post-tool-use/code-checks.py\"",
+            "timeout": 300
+          }
+        ]
+      }
     ]
   }
 }
