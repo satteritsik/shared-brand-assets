@@ -67,7 +67,7 @@
 
 export.auto: true
 sync:
-    remote: "https://github.com/satteritsik/SkillSpoke-assets.git"
+    remote: "git+https://github.com/satteritsik/shared-brand-assets.git"
 dolt:
     shared-server: true
     port: 3308
