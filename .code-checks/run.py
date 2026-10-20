@@ -382,9 +382,11 @@ def mypy_check(mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
         return []
     interpreter = python_environment()
     mypy = f"mypy@{spec.pins['mypy']}"
+    # The pydantic.mypy plugin in mypy.ini is imported from mypy's own environment.
+    plugin = ["--with", f"pydantic=={spec.pins['pydantic']}"]
     if interpreter is None:
-        return [run_tool("mypy", [_uvx(), mypy, *targets])]
-    argv = [_uvx(), "--python", str(interpreter), mypy, "--python-executable", str(interpreter), *targets]
+        return [run_tool("mypy", [_uvx(), *plugin, mypy, *targets])]
+    argv = [_uvx(), "--python", str(interpreter), *plugin, mypy, "--python-executable", str(interpreter), *targets]
     return [run_tool("mypy", argv)]
 
 

@@ -3,6 +3,7 @@
   "pins": {
     "ruff": "0.17.1",
     "mypy": "2.4.0",
+    "pydantic": "2.13.4",
     "shellcheck-py": "0.11.0.1",
     "pre-commit": "4.7.0",
     "node": {
