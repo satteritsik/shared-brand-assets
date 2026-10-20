@@ -6,7 +6,7 @@ caller checks with one definition. Usage:
 
     python3 .code-checks/run.py edit <file>
     python3 .code-checks/run.py commit <hook-id> [file ...]
-    python3 .code-checks/run.py all [stack ...]
+    python3 .code-checks/run.py all [technology ...]
 
 Each check runs in the repository's own environment: Python tools against the repository's
 `.venv` (the primary working tree's when a worktree has none), Node tools from its
@@ -86,7 +86,7 @@ class CheckEnvironmentError(Exception):
 class Spec:
     """What `checks.json` says about this repository."""
 
-    stacks: frozenset[str]
+    technologies: frozenset[str]
     pins: dict[str, str]
     node_pins: dict[str, str]
     cdk_apps: tuple[str, ...]
@@ -169,7 +169,7 @@ def load_spec() -> Spec:
     node: object = pins.get("node", {}) if isinstance(pins, dict) else None
     flat_pins = {key: value for key, value in (pins or {}).items() if key != "node"} if isinstance(pins, dict) else pins
     return Spec(
-        frozenset(_string_list(parsed.get("stacks"), "stacks")),
+        frozenset(_string_list(parsed.get("technologies"), "technologies")),
         _string_map(flat_pins, "pins"),
         _string_map(node, "pins.node"),
         _string_list(parsed.get("cdk_apps", []), "cdk_apps"),
@@ -560,11 +560,11 @@ def _base_copy(toolchain: Path) -> Path:
     return copy
 
 
-def eslint_command(stack: str, spec: Spec) -> list[str]:
+def eslint_command(technology: str, spec: Spec) -> list[str]:
     """Build the ESLint command: the repository's own ESLint, or the pinned toolchain for JavaScript alone.
 
     Args:
-        stack: `typescript` or `javascript`.
+        technology: `typescript` or `javascript`.
         spec: The spec.
 
     Returns:
@@ -578,7 +578,7 @@ def eslint_command(stack: str, spec: Spec) -> list[str]:
     if own is not None:
         configured = any(Path(rel).name in ESLINT_OWN_CONFIGS for rel in tracked(CONFIG_SUFFIXES))
         return [str(own), "--no-warn-ignored", *([] if configured else ["--config", ESLINT_BASE])]
-    if stack == "typescript" or (TREE / "package.json").is_file():
+    if technology == "typescript" or (TREE / "package.json").is_file():
         message = "ESLint is not installed: run `npm ci`"
         raise CheckEnvironmentError(message)
     toolchain = ephemeral_toolchain(spec)
@@ -586,11 +586,11 @@ def eslint_command(stack: str, spec: Spec) -> list[str]:
     return [str(eslint), "--no-warn-ignored", "--config", str(_base_copy(toolchain))]
 
 
-def prettier_command(stack: str, spec: Spec) -> list[str]:
+def prettier_command(technology: str, spec: Spec) -> list[str]:
     """Build the Prettier command, resolved like ESLint's.
 
     Args:
-        stack: `typescript` or `javascript`.
+        technology: `typescript` or `javascript`.
         spec: The spec.
 
     Returns:
@@ -603,17 +603,17 @@ def prettier_command(stack: str, spec: Spec) -> list[str]:
     own = node_tool("prettier")
     if own is not None:
         return [str(own)]
-    if stack == "typescript" or (TREE / "package.json").is_file():
+    if technology == "typescript" or (TREE / "package.json").is_file():
         message = "Prettier is not installed: run `npm ci`"
         raise CheckEnvironmentError(message)
     return [str(ephemeral_toolchain(spec) / "node_modules" / ".bin" / "prettier")]
 
 
-def eslint_check(stack: str, mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
+def eslint_check(technology: str, mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
     """Run ESLint over the files, or over the tree.
 
     Args:
-        stack: `typescript` or `javascript`.
+        technology: `typescript` or `javascript`.
         mode: `edit`, `commit` or `all`.
         files: The paths to check.
         spec: The spec.
@@ -623,14 +623,14 @@ def eslint_check(stack: str, mode: str, files: Sequence[str], spec: Spec) -> lis
 
     """
     targets = ["."] if mode == "all" else list(files)
-    return [run_tool(f"eslint ({stack})", [*eslint_command(stack, spec), *targets])]
+    return [run_tool(f"eslint ({technology})", [*eslint_command(technology, spec), *targets])]
 
 
-def prettier_check(stack: str, mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
+def prettier_check(technology: str, mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
     """Run Prettier: it writes at commit and only checks elsewhere.
 
     Args:
-        stack: `typescript` or `javascript`.
+        technology: `typescript` or `javascript`.
         mode: `edit`, `commit` or `all`.
         files: The paths to check.
         spec: The spec.
@@ -641,8 +641,8 @@ def prettier_check(stack: str, mode: str, files: Sequence[str], spec: Spec) -> l
     """
     action = "--write" if mode == "commit" else "--check"
     targets = ["."] if mode == "all" else list(files)
-    argv = [*prettier_command(stack, spec), action, "--ignore-unknown", *targets]
-    return [run_tool(f"prettier {action} ({stack})", argv)]
+    argv = [*prettier_command(technology, spec), action, "--ignore-unknown", *targets]
+    return [run_tool(f"prettier {action} ({technology})", argv)]
 
 
 def nearest_tsconfig(path: Path) -> Path | None:
@@ -844,7 +844,7 @@ HOOKS: Final[dict[str, tuple[str, CheckRunner]]] = {
 
 
 def edit_hooks(path: Path, spec: Spec) -> list[str]:
-    """Choose the checks for one edited file by its type and the repository's stacks.
+    """Choose the checks for one edited file by its type and the repository's technologies.
 
     Args:
         path: The edited file.
@@ -862,7 +862,7 @@ def edit_hooks(path: Path, spec: Spec) -> list[str]:
         (bool(apps_for(path, spec)), ["cdk-nag"]),
     ]
     hooks = [hook for applies, ids in by_kind if applies for hook in ids]
-    return [hook for hook in hooks if HOOKS[hook][0] in spec.stacks]
+    return [hook for hook in hooks if HOOKS[hook][0] in spec.technologies]
 
 
 def run_hooks(hooks: Sequence[str], mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
@@ -994,7 +994,7 @@ def parse_arguments(argv: Sequence[str]) -> argparse.Namespace:
     commit = modes.add_parser("commit")
     commit.add_argument("hook", choices=sorted(HOOKS))
     commit.add_argument("files", nargs="*")
-    modes.add_parser("all").add_argument("stacks", nargs="*")
+    modes.add_parser("all").add_argument("technologies", nargs="*")
     return parser.parse_args(argv)
 
 
@@ -1020,8 +1020,12 @@ def main(argv: Sequence[str]) -> int:
         return report(outcomes)
     if arguments.mode == "commit":
         return report(run_hooks([arguments.hook], "commit", arguments.files, spec))
-    stacks = frozenset(arguments.stacks) or spec.stacks
-    hooks = [hook for hook, (stack, _runner) in HOOKS.items() if stack in stacks and stack in spec.stacks]
+    technologies = frozenset(arguments.technologies) or spec.technologies
+    hooks = [
+        hook
+        for hook, (technology, _runner) in HOOKS.items()
+        if technology in technologies and technology in spec.technologies
+    ]
     return report(run_hooks(hooks, "all", [], spec))
 
 
