@@ -9,40 +9,9 @@ This repository is indexed by GitNexus as **shared-brand-assets**. Use the GitNe
 
 Every SkillSpoke repository is in the GitNexus group `skillspoke`, at its clone's path under `$SKILLSPOKE_APPS`. For work that crosses repositories (an API, an event, a shared library), pass `repo: "@skillspoke/<group path>"` to `gitnexus_query` or `gitnexus_impact`, naming this repository's member, its clone path under `$SKILLSPOKE_APPS` (for example `@skillspoke/personal-agent/SkillSpoke-chat-service`); `gitnexus_group_list` lists the members. The CLI commands are in `.claude/skills/gitnexus/gitnexus-cli/SKILL.md`.
 
-## Always Do
+## How agents that change code use it
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/shared-brand-assets/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/shared-brand-assets/clusters` | All functional areas |
-| `gitnexus://repo/shared-brand-assets/processes` | All execution flows |
-| `gitnexus://repo/shared-brand-assets/process/{name}` | Step-by-step execution trace |
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+Running `impact` before editing a symbol, `rename` for every rename, and `detect_changes` before a commit are in the `agent-teams-workforce` skills `graphrag-lookup` and `software-engineering`, which the agents that change code load.
 <!-- END GITNEXUS -->
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
@@ -171,6 +140,12 @@ every capability serves the job seeker.
   not that nothing exists: ask the owner to open it.
 - The architecture is the arc42 SAD under `docs/tech/architecture/arc42/` in the vault, kept
   with the `agent-teams-workforce:arc42` skills. Do not create ADRs.
+- **SkillSpoke's project skills** live in the command-and-control repository and reach a session
+  in another repository only by path. Read the one that covers your task before you decide
+  anything it covers: `$SKILLSPOKE_CC/.claude/skills/skillspoke-events/SKILL.md` for anything
+  that produces, routes or receives an event; `$SKILLSPOKE_CC/.claude/skills/skillspoke-postgresql/SKILL.md`
+  for anything that stores data in PostgreSQL; `$SKILLSPOKE_CC/.claude/skills/skillspoke-docs-vault/SKILL.md`
+  for filing or finding a document in the vault.
 - **Repository facts.** Ask the `polyrepo-steward` agent for anything about a repository other
   than its contents: which repo owns a function, where a repo is, whether it is up to date with
   GitHub, creating, renaming or deprecating one. For cross-repo code questions, search the
@@ -206,9 +181,11 @@ every capability serves the job seeker.
 - Cross-stack values go through SSM Parameter Store: the producing stack writes the parameter,
   the consuming stack reads it. Never CloudFormation exports or imports.
 - **CDK.** Build every CDK app and stack with `shared-cdk-lib` (import `shared.cdk`):
-  `run_app`, `PlatformStack`, `Names`, `ChassisFunction`, `PlatformRestApi`, `PlatformTable`,
+  `run_app`, `PlatformStack`, `ChassisFunction`, `PlatformRestApi`, `PlatformTable`,
   `put_param`; never a copied `lambda_utils.py`. A repository not yet on it moves to it when a
-  Task next changes its CDK.
+  Task next changes its CDK. Every stack and resource name is written into the code as the
+  architecture gives it and passed to these constructs; no code composes a name. A value known
+  only at deploy time (account, Region) is the stack's token, which CDK resolves.
 - **Web UI.** Product UI is built with the `cds` plugin (the Configurable Design System), using
   its configuration and composition rather than a page-by-page design. Tables use AG Grid.
 - **Issue tracking** is beads (`bd`), prefix `ssbd-`. Never run `bd init`.
