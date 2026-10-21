@@ -22,7 +22,7 @@ description: "Use when the user wants to rename, extract, split, move, or restru
 4. Plan update order: interfaces → implementations → callers → tests
 ```
 
-> If "Index is stale" → run `"$SKILLSPOKE_CC/ops/indexing/gitnexus-reindex.sh" .` in the terminal, from the repository root.
+> If "Index is stale" → run `ops/indexing/gitnexus-reindex.sh .` in the terminal, from the repository root.
 
 ## Checklists
 
