@@ -1,0 +1,539 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "SkillSpokeEventEnvelope"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "AWSEvent": {
+        "type": "object",
+        "required": [
+          "detail-type",
+          "resources",
+          "detail",
+          "id",
+          "source",
+          "time",
+          "region",
+          "account",
+          "version"
+        ],
+        "x-amazon-events-detail-type": "SkillSpoke Event",
+        "x-amazon-events-source": "skillspoke.events-publisher",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "region": {
+            "type": "string"
+          },
+          "detail-type": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "detail": {
+            "$ref": "#/components/schemas/SkillSpokeEvent"
+          }
+        }
+      },
+      "SkillSpokeEvent": {
+        "type": "object",
+        "description": "Standard event envelope for all user, domain, data, and system events in the SkillSpoke platform.",
+        "required": [
+          "eventId",
+          "eventType",
+          "category",
+          "domain",
+          "source",
+          "timestamps"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "description": "Globally unique identifier for this event instance (e.g., ULID).",
+            "minLength": 1
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Logical type of the event, following the pattern 'domain.entity.verb' (e.g., 'job-search.execution.finished').",
+            "minLength": 1
+          },
+          "eventSchemaVersion": {
+            "type": "string",
+            "description": "Semantic version of the event payload schema (not the envelope schema).",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "category": {
+            "type": "string",
+            "description": "One of the four categories, chosen by the producer for each event.",
+            "enum": ["user", "domain", "data", "system"]
+          },
+          "domain": {
+            "type": "string",
+            "description": "Primary domain to which this event belongs (e.g., job-search, candidate-profile, billing).",
+            "minLength": 1
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "timestamps": {
+            "$ref": "#/components/schemas/Timestamps"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/Trace"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "identifiers": {
+            "$ref": "#/components/schemas/Identifiers"
+          },
+          "businessContext": {
+            "$ref": "#/components/schemas/BusinessContext"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/Lifecycle"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/Payload"
+          },
+          "tags": {
+            "type": "array",
+            "description": "Free-form labels for experimentation, rollout cohorts, or other non-structural classification.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Source": {
+        "type": "object",
+        "description": "Information about the service that produced the event.",
+        "required": [
+          "service",
+          "region",
+          "environment"
+        ],
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Logical name of the producing service.",
+            "minLength": 1
+          },
+          "subsystem": {
+            "type": "string",
+            "description": "Optional subsystem or component name within the service."
+          },
+          "region": {
+            "type": "string",
+            "description": "Region in which the event was produced."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Deployment environment where the event originated."
+          }
+        }
+      },
+      "Timestamps": {
+        "type": "object",
+        "description": "Key timestamps for when the event occurred and was published.",
+        "required": [
+          "occurredAt",
+          "publishedAt"
+        ],
+        "properties": {
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the underlying business or system action logically occurred."
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the event was published to the event bus."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional expiration time for this event in the context of retries or workflow validity."
+          }
+        }
+      },
+      "Trace": {
+        "type": "object",
+        "description": "Identifiers that link this event to a broader workflow or distributed trace.",
+        "required": [
+          "correlationId"
+        ],
+        "properties": {
+          "correlationId": {
+            "type": "string",
+            "description": "Business-level identifier for the overall unit of work or saga that this event is part of.",
+            "minLength": 1
+          },
+          "causationId": {
+            "type": "string",
+            "description": "Identifier of the prior event that directly caused this event, if any."
+          },
+          "parentEventId": {
+            "type": "string",
+            "description": "Identifier of a parent event in a fan-out or tree structure, if applicable."
+          },
+          "rootEventId": {
+            "type": "string",
+            "description": "Identifier of the first event in the overall workflow."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Distributed tracing identifier (e.g., W3C trace ID, X-Ray trace ID)."
+          },
+          "spanId": {
+            "type": "string",
+            "description": "Span identifier within the distributed trace."
+          }
+        }
+      },
+      "Actor": {
+        "type": "object",
+        "description": "Information about the actor responsible for initiating the event, if applicable.",
+        "properties": {
+          "actorType": {
+            "type": "string",
+            "description": "Type of actor initiating the event."
+          },
+          "actorId": {
+            "type": "string",
+            "description": "Identifier of the actor (user ID, system ID, etc.)."
+          },
+          "actorDisplay": {
+            "type": "string",
+            "description": "Human-readable identifier for the actor."
+          }
+        }
+      },
+      "Identifiers": {
+        "type": "object",
+        "description": "Canonical identifiers for joining events with domain data (tenant, user, resource, etc.).",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "description": "Tenant or account identifier."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Primary user identifier relevant to this event."
+          },
+          "executionId": {
+            "type": "string",
+            "description": "Identifier for the logical execution or workflow instance represented by this event."
+          },
+          "resourceType": {
+            "type": "string",
+            "description": "Type of the primary resource associated with this event."
+          },
+          "resourceId": {
+            "type": "string",
+            "description": "Identifier of the primary resource associated with this event."
+          },
+          "parentResourceId": {
+            "type": "string",
+            "description": "Identifier of a parent resource, if applicable."
+          }
+        }
+      },
+      "BusinessContext": {
+        "type": "object",
+        "description": "High-level business process and step information for this event.",
+        "properties": {
+          "process": {
+            "type": "string",
+            "description": "Business process name."
+          },
+          "step": {
+            "type": "string",
+            "description": "High-level step within the process."
+          },
+          "subStep": {
+            "type": "string",
+            "description": "Optional sub-step providing finer granularity."
+          }
+        }
+      },
+      "Lifecycle": {
+        "type": "object",
+        "description": "State, outcome, severity, and error details for this event.",
+        "required": [
+          "phase",
+          "outcome",
+          "severity",
+          "isError"
+        ],
+        "properties": {
+          "phase": {
+            "type": "string",
+            "description": "High-level phase of the lifecycle at the time of this event.",
+            "enum": [
+              "started",
+              "in-progress",
+              "finished",
+              "finalized"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Outcome of the action represented by this event.",
+            "enum": [
+              "success",
+              "successWithWarning",
+              "failed",
+              "canceled",
+              "timeout"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "description": "Severity level for the outcome of this event.",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ]
+          },
+          "statusCode": {
+            "type": "integer",
+            "description": "Domain-specific or HTTP-like status code representing the outcome."
+          },
+          "statusSummary": {
+            "type": "string",
+            "description": "Short, human-readable summary of the outcome."
+          },
+          "statusReason": {
+            "type": "string",
+            "description": "Optional additional detail regarding the status."
+          },
+          "isError": {
+            "type": "boolean",
+            "description": "Convenience flag indicating whether this event represents an error condition."
+          },
+          "retry": {
+            "$ref": "#/components/schemas/Retry"
+          },
+          "details": {
+            "$ref": "#/components/schemas/LifecycleDetails"
+          }
+        }
+      },
+      "Retry": {
+        "type": "object",
+        "description": "Information about retries associated with this event. The policy structure is intentionally flexible to support complex strategies.",
+        "properties": {
+          "retryCount": {
+            "type": "integer",
+            "description": "Number of attempts that have been made so far for this logical operation.",
+            "minimum": 0
+          },
+          "maxRetries": {
+            "type": "integer",
+            "description": "Maximum number of retries allowed under the current policy, if applicable.",
+            "minimum": 0
+          },
+          "isFinalAttempt": {
+            "type": "boolean",
+            "description": "Indicates whether this attempt is the final one according to the current policy."
+          },
+          "nextRetryAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Planned time for the next retry attempt, if any."
+          },
+          "retryStrategy": {
+            "type": "string",
+            "description": "High-level name of the retry strategy in use (e.g., exponential-backoff)."
+          },
+          "retryReason": {
+            "type": "string",
+            "description": "Free-text explanation of why a retry is being attempted or scheduled."
+          },
+          "firstAttemptAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the first attempt in this series."
+          },
+          "policy": {
+            "type": "object",
+            "description": "Optional structured description of the retry policy. The exact shape is defined by the retry subsystem.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "LifecycleDetails": {
+        "type": "object",
+        "description": "Additional details about errors, performance, and SLAs related to this event.",
+        "properties": {
+          "errorCategory": {
+            "type": "string",
+            "description": "High-level classification of the error type, if any.",
+            "enum": [
+              "none",
+              "validation",
+              "transient",
+              "permanent",
+              "security",
+              "infrastructure"
+            ]
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Domain-specific error code."
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Short, human-readable error message."
+          },
+          "errorDetails": {
+            "type": "object",
+            "description": "Optional structured data with additional error information.",
+            "additionalProperties": true
+          },
+          "errorSource": {
+            "type": "string",
+            "description": "Name of the component or service where the error originated."
+          },
+          "logReference": {
+            "type": "string",
+            "description": "Identifier or URI that can be used to locate detailed logs or traces for this event."
+          },
+          "remediationHint": {
+            "type": "string",
+            "description": "Optional human-readable hint for how to fix or investigate the problem."
+          },
+          "isTransient": {
+            "type": "boolean",
+            "description": "Indicates whether the error is considered transient and potentially recoverable with retries."
+          },
+          "durationMs": {
+            "type": "number",
+            "description": "Duration of the operation represented by this event, in milliseconds, if applicable.",
+            "minimum": 0
+          },
+          "slaMs": {
+            "type": "number",
+            "description": "Target SLA for the operation, in milliseconds, if applicable.",
+            "minimum": 0
+          },
+          "sloViolated": {
+            "type": "boolean",
+            "description": "Indicates whether the operation violated an SLO or SLA objective."
+          }
+        }
+      },
+      "Visibility": {
+        "type": "object",
+        "description": "Classification and privacy-related metadata for this event.",
+        "properties": {
+          "classification": {
+            "type": "string",
+            "description": "Data classification level for this event.",
+            "enum": [
+              "internal",
+              "restricted",
+              "pii",
+              "phi",
+              "public"
+            ]
+          },
+          "piiPresent": {
+            "type": "boolean",
+            "description": "Indicates whether the payload contains personally identifiable information."
+          }
+        }
+      },
+      "Payload": {
+        "type": "object",
+        "description": "Domain-specific information carried by the event, either inline or via an external reference (coat-check pattern).",
+        "required": [
+          "mode",
+          "schemaUri",
+          "contentType"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Whether the payload is included inline or referenced externally.",
+            "enum": [
+              "inline",
+              "reference"
+            ]
+          },
+          "schemaUri": {
+            "type": "string",
+            "description": "URI pointing to the schema that describes the payload contents."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "MIME type for the payload contents."
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "description": "Size of the payload content in bytes, if known.",
+            "minimum": 0
+          },
+          "inline": {
+            "type": "object",
+            "description": "Inline domain-specific content. Present when mode is 'inline'.",
+            "additionalProperties": true
+          },
+          "reference": {
+            "$ref": "#/components/schemas/PayloadReference"
+          }
+        }
+      },
+      "PayloadReference": {
+        "type": "object",
+        "description": "External reference to the payload content. Present when mode is 'reference'.",
+        "properties": {
+          "storageType": {
+            "type": "string",
+            "description": "Type of external storage where the payload is stored."
+          },
+          "location": {
+            "type": "string",
+            "description": "URI or address of the externally stored payload."
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Checksum of the stored payload for integrity verification."
+          },
+          "encrypted": {
+            "type": "boolean",
+            "description": "Indicates whether the stored payload is encrypted."
+          }
+        }
+      }
+    }
+  }
+}
