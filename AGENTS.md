@@ -190,6 +190,22 @@ every capability serves the job seeker.
   its configuration and composition rather than a page-by-page design. Tables use AG Grid.
 - **Issue tracking** is beads (`bd`), prefix `ssbd-`. Never run `bd init`.
 
+### Library versions
+
+- Every SkillSpoke library is versioned `0.0.N` until production launch. Major and minor stay
+  0; each publish adds 1 to the patch number.
+- A library version exists only in CodeArtifact. `task publish` reads the highest published
+  version, adds 1 to the patch number, and builds and uploads that version. The `version` in a
+  library's `pyproject.toml` stays `0.0.0` and is never edited; a hook rejects a commit that
+  changes it.
+- A commit or a push to `main` is not a release and publishes nothing.
+- A consumer depends on a SkillSpoke library as `"<library>==0.*"` and never changes that pin.
+  It picks up a newly published version with `uv lock --upgrade-package <library>`, which can
+  only find published versions.
+- When a change needs library code that is not yet in CodeArtifact, stop and report which
+  library must be published first. Never edit a pin, a lockfile or a library version to get
+  ahead of CodeArtifact.
+
 ### Git flow
 
 Tier is decided by what a file is, not by the repository that holds it. Tier 1 is the product:
