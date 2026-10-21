@@ -3,7 +3,7 @@
 
 This repository is indexed by GitNexus as **shared-brand-assets**. Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> The index refreshes itself: a git hook queues a background re-index after every commit, merge, checkout and rebase, and every session start queues any repository that is behind and reports any GitNexus problem to the owner. If a GitNexus tool warns the index is stale and `python3 "$SKILLSPOKE_CC/ops/indexing/gitnexus-fleet.py" status` shows no re-index queued for it, run `"$SKILLSPOKE_CC/ops/indexing/gitnexus-reindex.sh" .` in the terminal from the repository root. Run every other GitNexus command through `"$SKILLSPOKE_CC/ops/indexing/gitnexus-pinned.sh" <command>`; never start GitNexus any other way, because the project pins one version in `ops/indexing/gitnexus-version` of the control repository.
+> The index refreshes itself in the background after every commit, merge, checkout and rebase on the owner's machine. If a GitNexus tool warns the index is stale, run `ops/indexing/gitnexus-reindex.sh .` in the terminal from the repository root. Run every other GitNexus command through `ops/indexing/gitnexus-pinned.sh <command>`; never start GitNexus any other way, because the project pins one GitNexus version, in this repository's `ops/indexing/gitnexus-version`.
 
 ## Across repositories
 
@@ -96,13 +96,20 @@ bd prime                # Refresh Beads context
 <!-- BEGIN SKILLSPOKE SHARED: written by `polyrepo agents-sync` from repositories/agents-shared-block.md in the SkillSpoke repo; edit it there -->
 ## SkillSpoke: instructions shared by every repository
 
-This repository is one of the SkillSpoke project's repositories. The SkillSpoke
-command-and-control repository (`$SKILLSPOKE_CC`) holds the instructions that apply across all
-of them, in its `AGENTS.md` and `.claude/rules/`. A session here follows the same rules and
-expectations as a session there; this block carries the ones that apply in every repository.
+This repository is one of the SkillSpoke project's repositories. This block carries the rules
+and expectations that apply in every one of them.
 
 SkillSpoke is a personal job-search agent: it does the job search on the seeker's behalf, and
 every capability serves the job seeker.
+
+### Every repository is self-contained
+
+Each repository is self-contained and independently deployable: anyone can change, check,
+publish and deploy it from this repository alone. Nothing in it may depend on, call into or point
+back to the command-and-control repository. The command-and-control repository may reach out to
+the repositories (copy files into them, index them, run things against them), never the reverse.
+The reason: every repository must stay a normal, independently maintainable project, including for
+future teams that work without Claude Code.
 
 ### Who works here
 
@@ -140,12 +147,10 @@ every capability serves the job seeker.
   not that nothing exists: ask the owner to open it.
 - The architecture is the arc42 SAD under `docs/tech/architecture/arc42/` in the vault, kept
   with the `agent-teams-workforce:arc42` skills. Do not create ADRs.
-- **SkillSpoke's project skills** live in the command-and-control repository and reach a session
-  in another repository only by path. Read the one that covers your task before you decide
-  anything it covers: `$SKILLSPOKE_CC/.claude/skills/skillspoke-events/SKILL.md` for anything
-  that produces, routes or receives an event; `$SKILLSPOKE_CC/.claude/skills/skillspoke-postgresql/SKILL.md`
-  for anything that stores data in PostgreSQL; `$SKILLSPOKE_CC/.claude/skills/skillspoke-docs-vault/SKILL.md`
-  for filing or finding a document in the vault.
+- **SkillSpoke's project skills** are in this repository's `.claude/skills/`. Load the one that
+  covers your task before you decide anything it covers: `skillspoke-events` for anything that
+  produces, routes or receives an event; `skillspoke-postgresql` for anything that stores data in
+  PostgreSQL; `skillspoke-docs-vault` for filing or finding a document in the vault.
 - **Repository facts.** Ask the `polyrepo-steward` agent for anything about a repository other
   than its contents: which repo owns a function, where a repo is, whether it is up to date with
   GitHub, creating, renaming or deprecating one. For cross-repo code questions, search the
@@ -153,8 +158,8 @@ every capability serves the job seeker.
 - **Repository names.** `SkillSpoke-{name}` is the personal-agent app; `shared-{name}` is
   shared across the whole company; `marketing-{name}` is marketing; `employer-{name}` is the
   employer app. A retired repo is deprecated by renaming it `deprecated-{name}` in lowercase
-  (its pull requests are closed and its local clone is deleted); the owner then deletes it on
-  GitHub, and the steward's record of it goes.
+  (its pull requests are closed and its local clone is deleted), and the `polyrepo-steward`
+  archives it on GitHub later. A repository is never deleted.
 
 ### Code quality (this is the product: tier 1)
 
@@ -208,12 +213,13 @@ every capability serves the job seeker.
 ### Git flow
 
 Tier is decided by what a file is, not by the repository that holds it. Tier 1 is the product:
-the code, infrastructure, scripts and CI/CD that would exist if AI did not. Everything that exists
-because of AI is tier 2, wherever it sits: `AGENTS.md`, `CLAUDE.md`, `.claude/`, the agents, skills,
-plugins and the pipeline.
+its code, infrastructure, scripts and CI/CD. Tier 2 is everything used to build tier 1, wherever it
+sits: `AGENTS.md`, `CLAUDE.md`, `.claude/`, the code-check configuration (`.code-checks/` and the
+other files `polyrepo checks-sync` writes), the tooling in `ops/` (the GitNexus scripts and, in a
+library, the release script), the agents, skills, plugins and the pipeline.
 
-- **Tier 2 files in this repository** (`AGENTS.md` at any depth, `CLAUDE.md`, and everything
-  under `.claude/`): commit directly on `main` in the primary working tree and push. No
+- **Tier 2 files in this repository** (`AGENTS.md` at any depth, `CLAUDE.md`, everything
+  under `.claude/`, and the code-check configuration): commit directly on `main` in the primary working tree and push. No
   worktree, branch, pull request, `skillspoke-pr` or CodeRabbit. `CLAUDE.md` is a symlink to
   `AGENTS.md`: edit `AGENTS.md`. A change that touches both kinds of file is split: the product
   files follow the rules below, the tier 2 files go directly to `main`.
@@ -221,7 +227,10 @@ plugins and the pipeline.
   feature branch, never on `main` in the primary working tree. Never commit product files on
   `main` and never push them to `main`.
 - Commits: `type(scope): description`, no `Co-Authored-By`.
-- Run `ruff check` on the files you changed before committing.
+- Before committing, run the repository's code checks through its own runner, from the
+  repository root: `task lint`, or `python3 .code-checks/run.py all`. Never run `ruff`, `mypy` or
+  `pytest` from a folder outside the repository root: each writes its cache in the folder it
+  starts from.
 - `--no-verify` (and `git commit -n`) is forbidden. When a pre-commit hook fails, fix every
   finding, restage, and commit again. If a finding cannot be fixed, abort with no commit and
   report. Loosening lint config is the owner's decision.
