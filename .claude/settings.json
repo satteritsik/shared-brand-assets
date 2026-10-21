@@ -1,48 +1,12 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$SKILLSPOKE_CC/ops/memory-consolidate.py\" hook --part 1",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "python3 \"$SKILLSPOKE_CC/ops/memory-consolidate.py\" hook --part 2",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "python3 \"$SKILLSPOKE_CC/ops/memory-consolidate.py\" hook --part 3",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "python3 \"$SKILLSPOKE_CC/ops/memory-consolidate.py\" hook --part 4",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "bash \"$SKILLSPOKE_CC/ops/indexing/gitnexus-session-start.sh\"",
-            "timeout": 20
-          }
-        ],
-        "matcher": ""
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$SKILLSPOKE_CC/.claude/hooks/pre-tool-use/linear-pull-redirect.sh\""
-          },
-          {
-            "type": "command",
-            "command": "bash \"$SKILLSPOKE_CC/.claude/hooks/pre-tool-use/pipeline-run-blocker.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use/pipeline-run-blocker.sh\""
           }
         ]
       },
@@ -51,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$SKILLSPOKE_CC/.claude/hooks/pre-tool-use/matrix-edit-blocker.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use/matrix-edit-blocker.sh\""
           }
         ]
       }
@@ -62,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$SKILLSPOKE_CC/.claude/hooks/post-tool-use/code-checks.py\"",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use/code-checks.py\"",
             "timeout": 300
           }
         ]
