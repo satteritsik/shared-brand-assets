@@ -1,0 +1,7 @@
+version: '3'
+
+tasks:
+  lint:
+    desc: Run every code check of the repository's stacks (.code-checks/run.py)
+    cmds:
+      - python3 .code-checks/run.py all
