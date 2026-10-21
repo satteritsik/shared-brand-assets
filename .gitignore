@@ -19,3 +19,8 @@ Thumbs.db
 # Beads runtime and database files, and the standard ignores (polyrepo)
 .beads/issues.jsonl
 *.gate.lock*
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
