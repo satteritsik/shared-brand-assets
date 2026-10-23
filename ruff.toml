@@ -1,0 +1,32 @@
+line-length = 120
+preview = true
+extend-exclude = [".code-checks", ".claude/skills/ui-ux-pro-max", ".cursor/skills", "cdk.out"]
+
+[lint]
+select = [
+    "A", "ANN", "ARG", "ASYNC", "B", "BLE", "C4", "C90", "COM",
+    "D", "DOC", "E", "EM", "ERA", "F", "FIX", "FLY", "FURB",
+    "G", "I", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PL",
+    "PT", "PTH", "Q", "RET", "RSE", "RUF", "S", "SIM", "SLF",
+    "T10", "T20", "TC", "TD", "TID", "TRY", "UP",
+]
+ignore = [
+    "incorrect-blank-line-before-class",  # incompatible with D211 (no blank line before class docstring)
+    "multi-line-summary-second-line",  # incompatible with D212 (summary on first line of multi-line docstring)
+]
+
+[lint.per-file-ignores]
+".claude/skills/**/scripts/*.py" = [
+    "T20",
+    "suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path",
+    "raise-vanilla-args", "raw-string-in-exception", "f-string-in-exception",
+    "complex-structure", "too-many-branches", "too-many-locals", "too-many-statements",
+]
+"**/tests/**/*.py" = ["assert", "magic-value-comparison"]
+
+[lint.flake8-type-checking]
+runtime-evaluated-decorators = ["typeguard.typechecked"]
+runtime-evaluated-base-classes = ["typing.TypedDict", "pydantic.BaseModel"]
+
+[format]
+quote-style = "double"

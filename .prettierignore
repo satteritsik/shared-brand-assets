@@ -1,0 +1,13 @@
+# Written by `polyrepo checks-sync` from repositories/checkers/typescript/.prettierignore in the
+# SkillSpoke repository; edit it there. Prettier also skips what .gitignore ignores.
+
+# Folders the tools write and manage, not this repository's source.
+.beads/
+.gitnexus/
+.agents/skills/beads/
+.claude/skills/gitnexus/
+
+# Assembled by `polyrepo agents-sync` from blocks kept in other repositories; formatting it here
+# would make the blocks differ from their source and every sync would rewrite them.
+AGENTS.md
+CLAUDE.md

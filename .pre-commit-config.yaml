@@ -13,3 +13,35 @@ repos:
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: python-ruff
+        name: ruff check --fix and ruff format
+        entry: python3 .code-checks/run.py commit python-ruff
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: python-mypy
+        name: mypy (strict) in the repository's environment
+        entry: python3 .code-checks/run.py commit python-mypy
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: js-eslint
+        name: ESLint (JavaScript)
+        entry: python3 .code-checks/run.py commit js-eslint
+        language: system
+        types_or: [javascript, jsx]
+        require_serial: true
+      - id: js-prettier
+        name: Prettier (JavaScript)
+        entry: python3 .code-checks/run.py commit js-prettier
+        language: system
+        types_or: [javascript, jsx]
+        require_serial: true
+      - id: shellcheck
+        name: shellcheck
+        entry: python3 .code-checks/run.py commit shellcheck
+        language: system
+        types: [shell]
+        require_serial: true
