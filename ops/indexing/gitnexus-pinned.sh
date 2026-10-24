@@ -34,6 +34,18 @@ if ! [[ "$PINNED" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 INSTALLED_BIN="$(command -v gitnexus || true)"
+# `npm i -g` under nvm installs into the default Node's bin, which only an
+# interactive shell puts on PATH. A git hook or any scheduled, non-interactive
+# job runs without it, so nvm is loaded here to put the default Node, and the
+# gitnexus installed with it, on PATH.
+NVM_SH="${NVM_DIR:-${HOME}/.nvm}/nvm.sh"
+if [ -z "$INSTALLED_BIN" ] && [ -s "$NVM_SH" ]; then
+    set +u
+    # shellcheck source=/dev/null
+    . "$NVM_SH"
+    set -u
+    INSTALLED_BIN="$(command -v gitnexus || true)"
+fi
 if [ -z "$INSTALLED_BIN" ]; then
     echo "gitnexus-pinned: gitnexus is not on PATH. Install it: npm i -g gitnexus@${PINNED}" >&2
     exit 127

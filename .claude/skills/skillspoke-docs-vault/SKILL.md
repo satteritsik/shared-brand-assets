@@ -71,6 +71,20 @@ no ADRs, and a decided fact goes into section 2, 4 or 8.
 - Every vault document is classified with the `document-classification` skill (front matter
   `document_class`, `lifecycle_state`, `authority`, `purpose`, and the pointers that keep it
   honest). It is the authority on single source of truth and lifecycle states.
+- For an architecture document (`arc42/` or `detailed/`), its lifecycle and iteration rules are
+  in the `agent-teams-workforce:effective-architecture` skill, "Lifecycle, the baseline and
+  iteration".
 - The SkillSpoke NotebookLM notebook (through the `notebooklm` skill) and the GraphRAG index
   corroborate a vault search whose result is ambiguous. Nothing is authored there; NotebookLM is
   refreshed elsewhere.
+
+## GitNexus graph index of the architecture and SDLC documents
+
+GitNexus indexes `docs/tech/architecture/` and `docs/sdlc/`, and nothing else in the vault, as the
+repository `skillspoke-docs`. It is in no GitNexus group.
+
+- Query it with the GitNexus MCP tools and `repo: "skillspoke-docs"` (for example `query` for
+  the documents about a concept, `cypher` over the `File` and `Section` nodes and their links).
+- Re-index it after every write to those two folders, committed or not: run
+  `ops/indexing/gitnexus-docs-reindex.sh` in the command-and-control repository (`SkillSpoke`),
+  with no arguments.
