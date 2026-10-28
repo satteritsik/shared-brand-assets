@@ -85,6 +85,6 @@ repository `skillspoke-docs`. It is in no GitNexus group.
 
 - Query it with the GitNexus MCP tools and `repo: "skillspoke-docs"` (for example `query` for
   the documents about a concept, `cypher` over the `File` and `Section` nodes and their links).
-- Re-index it after every write to those two folders, committed or not: run
-  `ops/indexing/gitnexus-docs-reindex.sh` in the command-and-control repository (`SkillSpoke`),
-  with no arguments.
+- No agent re-indexes it. The elaboration pipeline re-indexes it once per architecture pass, after
+  the documents are written, with a script step that runs `ops/indexing/gitnexus-docs-reindex.sh`
+  of the command-and-control repository (`SkillSpoke`), with no arguments.
