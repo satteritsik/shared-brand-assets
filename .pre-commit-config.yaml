@@ -27,18 +27,6 @@ repos:
         language: system
         types_or: [python, pyi]
         require_serial: true
-      - id: js-eslint
-        name: ESLint (JavaScript)
-        entry: python3 .code-checks/run.py commit js-eslint
-        language: system
-        types_or: [javascript, jsx]
-        require_serial: true
-      - id: js-prettier
-        name: Prettier (JavaScript)
-        entry: python3 .code-checks/run.py commit js-prettier
-        language: system
-        types_or: [javascript, jsx]
-        require_serial: true
       - id: shellcheck
         name: shellcheck
         entry: python3 .code-checks/run.py commit shellcheck

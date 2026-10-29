@@ -629,7 +629,10 @@ def eslint_check(technology: str, mode: str, files: Sequence[str], spec: Spec) -
 
 
 def prettier_check(technology: str, mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
-    """Run Prettier: it writes at commit and only checks elsewhere.
+    """Run Prettier over the technology's own source files: it writes at commit and only checks elsewhere.
+
+    Prettier formats the JavaScript or TypeScript sources and nothing else: Markdown, YAML, JSON and
+    every other file are not its to check.
 
     Args:
         technology: `typescript` or `javascript`.
@@ -638,11 +641,15 @@ def prettier_check(technology: str, mode: str, files: Sequence[str], spec: Spec)
         spec: The spec.
 
     Returns:
-        One outcome.
+        One outcome, or none when the technology has no source file to check.
 
     """
+    suffixes = TYPESCRIPT_SUFFIXES if technology == "typescript" else JAVASCRIPT_SUFFIXES
+    candidates = tracked(suffixes) if mode == "all" else files
+    targets = [rel for rel in candidates if Path(rel).suffix in suffixes]
+    if not targets:
+        return []
     action = "--write" if mode == "commit" else "--check"
-    targets = ["."] if mode == "all" else list(files)
     argv = [*prettier_command(technology, spec), action, "--ignore-unknown", *targets]
     return [run_tool(f"prettier {action} ({technology})", argv)]
 

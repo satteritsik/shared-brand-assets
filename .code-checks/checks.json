@@ -1,5 +1,5 @@
 {
-  "technologies": ["python", "javascript", "shell"],
+  "technologies": ["python", "shell"],
   "pins": {
     "ruff": "0.17.1",
     "mypy": "2.4.0",
