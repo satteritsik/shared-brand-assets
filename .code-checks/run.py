@@ -345,20 +345,28 @@ def _mypy_targets(files: Sequence[str]) -> list[str]:
 def ruff_checks(mode: str, files: Sequence[str], spec: Spec) -> list[Outcome]:
     """Run `ruff check` and `ruff format`; at commit they fix, elsewhere they only report.
 
+    At commit the formatter runs first, so a line it can wrap is wrapped before the lint check
+    reads it, and again after `ruff check --fix`, whose fixes (a trailing comma, a sorted import)
+    can leave code the formatter rewrites. The files then come out of one run as the next run
+    leaves them.
+
     Args:
         mode: `edit`, `commit` or `all`.
         files: The paths to check (all: ignored, the whole tree is checked).
         spec: The spec.
 
     Returns:
-        The two outcomes.
+        The outcomes: three at commit (format, check with fixes, format), two elsewhere.
 
     """
     ruff = [_uvx(), f"ruff@{spec.pins['ruff']}"]
     targets = ["."] if mode == "all" else ["--force-exclude", *files]
     if mode == "commit":
-        fixed = run_tool("ruff check --fix", [*ruff, "check", "--fix", *targets])
-        return [fixed, run_tool("ruff format", [*ruff, "format", *targets])]
+        return [
+            run_tool("ruff format", [*ruff, "format", *targets]),
+            run_tool("ruff check --fix", [*ruff, "check", "--fix", *targets]),
+            run_tool("ruff format after fixes", [*ruff, "format", *targets]),
+        ]
     return [
         run_tool("ruff check", [*ruff, "check", "--no-fix", *targets]),
         run_tool("ruff format --check", [*ruff, "format", "--check", *targets]),
@@ -562,6 +570,38 @@ def _base_copy(toolchain: Path) -> Path:
     return copy
 
 
+def _config_copy(toolchain: Path) -> Path:
+    """Place the repository's own ESLint config inside the toolchain, beside the base it imports.
+
+    The own config at the tree's root imports the base as `./eslint.base.mjs` and may import any
+    package of the toolchain; in the toolchain both resolve. A tree with no own config gets the
+    base alone (:func:`_base_copy`).
+
+    Args:
+        toolchain: The ephemeral toolchain folder.
+
+    Returns:
+        The path of the config the toolchain's ESLint runs with.
+
+    """
+    own = next((TREE / name for name in ESLINT_OWN_CONFIGS if (TREE / name).is_file()), None)
+    if own is None:
+        return _base_copy(toolchain)
+    own_text = own.read_text(encoding="utf-8")
+    base_text = (TREE / ESLINT_BASE).read_text(encoding="utf-8")
+    folder = toolchain / f"config-{hashlib.sha256((own_text + base_text).encode()).hexdigest()[:16]}"
+    if not folder.is_dir():
+        staging = toolchain / f".{folder.name}.{os.getpid()}"
+        staging.mkdir(exist_ok=True)
+        (staging / own.name).write_text(own_text, encoding="utf-8")
+        (staging / ESLINT_BASE).write_text(base_text, encoding="utf-8")
+        try:
+            staging.rename(folder)
+        except OSError:
+            shutil.rmtree(staging, ignore_errors=True)
+    return folder / own.name
+
+
 def eslint_command(technology: str, spec: Spec) -> list[str]:
     """Build the ESLint command: the repository's own ESLint, or the pinned toolchain for JavaScript alone.
 
@@ -585,7 +625,7 @@ def eslint_command(technology: str, spec: Spec) -> list[str]:
         raise CheckEnvironmentError(message)
     toolchain = ephemeral_toolchain(spec)
     eslint = toolchain / "node_modules" / ".bin" / "eslint"
-    return [str(eslint), "--no-warn-ignored", "--config", str(_base_copy(toolchain))]
+    return [str(eslint), "--no-warn-ignored", "--config", str(_config_copy(toolchain))]
 
 
 def prettier_command(technology: str, spec: Spec) -> list[str]:
