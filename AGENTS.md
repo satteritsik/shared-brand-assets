@@ -196,19 +196,20 @@ future teams that work without Claude Code.
 
 ### Library versions
 
-- Every SkillSpoke library is versioned `0.0.N` until production launch. Major and minor stay
-  0; each publish adds 1 to the patch number.
-- A library version exists only in CodeArtifact. `task publish` reads the highest published
-  version, adds 1 to the patch number, and builds and uploads that version. The `version` in a
-  library's `pyproject.toml` stays `0.0.0` and is never edited; a hook rejects a commit that
-  changes it.
-- A commit or a push to `main` is not a release and publishes nothing.
-- A consumer depends on a SkillSpoke library as `"<library>==0.*"` and never changes that pin.
-  It picks up a newly published version with `uv lock --upgrade-package <library>`, which can
-  only find published versions.
-- When a change needs library code that is not yet in CodeArtifact, stop and report which
-  library must be published first. Never edit a pin, a lockfile or a library version to get
-  ahead of CodeArtifact.
+- Before the first MVP, SkillSpoke libraries use `0.0.N`. The agent increments the patch in
+  `pyproject.toml`; owner-selected major and minor components are preserved.
+- The committed source version is the package version. After a library Story merges into
+  `develop`, the owner's pipeline may publish that exact merged revision when its version is
+  newer than CodeArtifact's highest published version. Equal or older versions upload nothing;
+  equal-version retries verify provenance before completing missing tag operations, and
+  conflicting content fails visibly. No unmerged Story, `main`, release branch or tag triggers package publication.
+- Publishing a package does not deploy a Lambda Layer, function, service or infrastructure.
+  No branch merge triggers an AWS Dev deployment; deployment needs separate owner authorization.
+- Consumers retain compatible dependency declarations and deliberately update their exact
+  `uv.lock` versions with `uv lock --upgrade-package <library>` after publication. Publishing
+  does not change consumer locks or deployments.
+- A consumer Story requiring a new package depends on the provider Story merging into develop
+  and successful publication. Never point a consumer lock at an unpublished version.
 
 ### Git flow
 
@@ -219,13 +220,18 @@ other files `polyrepo checks-sync` writes), the tooling in `ops/` (the GitNexus 
 library, the release script), the agents, skills, plugins and the pipeline.
 
 - **Tier 2 files in this repository** (`AGENTS.md` at any depth, `CLAUDE.md`, everything
-  under `.claude/`, and the code-check configuration): commit directly on `main` in the primary working tree and push. No
-  worktree, branch, pull request, `skillspoke-pr` or CodeRabbit. `CLAUDE.md` is a symlink to
+  under `.claude/`, and the code-check configuration): commit on `main` in its working tree
+  and push. If the primary tree is on `develop`, use a separate `main` worktree without
+  disturbing active work. No feature branch, pull request, `skillspoke-pr` or CodeRabbit is
+  required. `CLAUDE.md` is a symlink to
   `AGENTS.md`: edit `AGENTS.md`. A change that touches both kinds of file is split: the product
-  files follow the rules below, the tier 2 files go directly to `main`.
+  files follow the rules below, the tier 2 files go directly to `main`. Carry applicable
+  tooling changes forward into `develop` through its integration flow.
 - **Product files** (everything else in this repository): work happens in a git worktree on a
-  feature branch, never on `main` in the primary working tree. Never commit product files on
-  `main` and never push them to `main`.
+  `story/ssbd-*` branch from `develop`, with its pull request targeting `develop`. Never commit
+  product files directly on `develop` or `main`. The primary integration tree stays on
+  `develop`; `main` is reserved for future releases without a mandatory separate PR. A
+  production release procedure is not implemented by these instructions.
 - Commits: `type(scope): description`, no `Co-Authored-By`.
 - Before committing, run the repository's code checks through its own runner, from the
   repository root: `task lint`, or `python3 .code-checks/run.py all`. Never run `ruff`, `mypy` or
