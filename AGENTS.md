@@ -149,8 +149,8 @@ future teams that work without Claude Code.
   with the `agent-teams-workforce:arc42` skills. Do not create ADRs.
 - **SkillSpoke's project skills** are in this repository's `.claude/skills/`. Load the one that
   covers your task before you decide anything it covers: `skillspoke-events` for anything that
-  produces, routes or receives an event; `skillspoke-postgresql` for anything that stores data in
-  PostgreSQL; `skillspoke-docs-vault` for filing or finding a document in the vault.
+  produces, routes or receives an event; `skillspoke-docs-vault` for filing or finding a document
+  in the vault.
 - **Repository facts.** Ask the `polyrepo-steward` agent for anything about a repository other
   than its contents: which repo owns a function, where a repo is, whether it is up to date with
   GitHub, creating, renaming or deprecating one. For cross-repo code questions, search the
