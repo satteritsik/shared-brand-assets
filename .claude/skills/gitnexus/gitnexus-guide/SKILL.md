@@ -15,7 +15,7 @@ For any task involving code understanding, debugging, impact analysis, or refact
 2. **Match your task to a skill below** and **read that skill file**
 3. **Follow the skill's workflow and checklist**
 
-> Indexes refresh themselves in the background after every commit, merge, checkout and rebase. If step 1 warns the index is stale, run `ops/indexing/gitnexus-reindex.sh .` in the terminal, from the repository root.
+> Indexes refresh themselves in the background after every commit, merge, checkout and rebase. If step 1 warns the index is stale, run `ops/indexing/gitnexus-reindex.sh .` in the terminal, from the root of the repository's main clone, never from a worktree, which the script refuses.
 
 ## Skills
 
