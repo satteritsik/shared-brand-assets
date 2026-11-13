@@ -3,7 +3,7 @@
 
 This repository is indexed by GitNexus as **shared-brand-assets**. Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> The index refreshes itself in the background after every commit, merge, checkout and rebase on the owner's machine. If a GitNexus tool warns the index is stale, run `ops/indexing/gitnexus-reindex.sh .` in the terminal from the repository root. Run every other GitNexus command through `ops/indexing/gitnexus-pinned.sh <command>`; never start GitNexus any other way, because the project pins one GitNexus version, in this repository's `ops/indexing/gitnexus-version`.
+> The index refreshes itself in the background after every commit, merge, checkout and rebase on the owner's machine. If a GitNexus tool warns the index is stale, run `ops/indexing/gitnexus-reindex.sh .` in the terminal from the root of the repository's main clone, never from a worktree, which the script refuses. Run every other GitNexus command through `ops/indexing/gitnexus-pinned.sh <command>`; never start GitNexus any other way, because the project pins one GitNexus version, in this repository's `ops/indexing/gitnexus-version`.
 
 ## Across repositories
 
@@ -196,11 +196,25 @@ future teams that work without Claude Code.
 
 ### Library versions
 
-- Before the first MVP, SkillSpoke libraries use `0.0.N`. The agent increments the patch in
-  `pyproject.toml`; owner-selected major and minor components are preserved.
+- Before the first MVP, SkillSpoke libraries use `0.0.N`; preserve owner-selected major and
+  minor components. Before changing a library version, read its configured CodeArtifact
+  package's existing versions and statuses. Distinguish the highest Published version from
+  the highest allocated numeric version across all statuses; reserved versions cannot be reused.
+- Reconcile legacy source below the Published baseline on the same major/minor line to that
+  baseline first, without a release increment. Preserve a pending source candidate only when
+  it exceeds every allocated version. If it exceeds Published but not all allocated versions,
+  preserve the owner's edits and report the collision before selecting a patch.
+  For a new publishable change, select one patch increment above the highest allocated numeric
+  version on that line; if a newer candidate already exists, retain it rather than bumping again.
+  With no existing versions, increment the initial source patch once for the first change.
+  Never reuse archived, unlisted or reserved numbers. Report unexpected statuses, unsupported
+  or non-numeric versions, and conflicting major/minor lines instead of assigning blindly.
+  Regenerate the provider's lock after changing its source version without upgrading dependencies;
+  do not change consumer locks as part of baseline reconciliation.
 - The committed source version is the package version. After a library Story merges into
   `develop`, the owner's pipeline may publish that exact merged revision when its version is
-  newer than CodeArtifact's highest published version. Equal or older versions upload nothing;
+  newer than CodeArtifact's highest allocated numeric version across all statuses. Equal or
+  older versions upload nothing;
   equal-version retries verify provenance before completing missing tag operations, and
   conflicting content fails visibly. No unmerged Story, `main`, release branch or tag triggers package publication.
 - Publishing a package does not deploy a Lambda Layer, function, service or infrastructure.
