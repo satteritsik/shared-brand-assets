@@ -3,7 +3,7 @@
 
 This repository is indexed by GitNexus as **shared-brand-assets**. Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> The index refreshes itself in the background after every commit, merge, checkout and rebase on the owner's machine. If a GitNexus tool warns the index is stale, run `ops/indexing/gitnexus-reindex.sh .` in the terminal from the repository root. Run every other GitNexus command through `ops/indexing/gitnexus-pinned.sh <command>`; never start GitNexus any other way, because the project pins one GitNexus version, in this repository's `ops/indexing/gitnexus-version`.
+> The index refreshes itself in the background after every commit, merge, checkout and rebase on the owner's machine. If a GitNexus tool warns the index is stale, run `ops/indexing/gitnexus-reindex.sh .` in the terminal from the root of the repository's main clone, never from a worktree, which the script refuses. Run every other GitNexus command through `ops/indexing/gitnexus-pinned.sh <command>`; never start GitNexus any other way, because the project pins one GitNexus version, in this repository's `ops/indexing/gitnexus-version`.
 
 ## Across repositories
 
