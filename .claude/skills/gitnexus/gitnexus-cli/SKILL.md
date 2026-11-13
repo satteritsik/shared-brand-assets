@@ -15,7 +15,7 @@ Every command runs from the repository root through the pinned wrapper `ops/inde
 ops/indexing/gitnexus-reindex.sh .
 ```
 
-Run from the project root. `gitnexus-reindex.sh` parses all source files, builds the knowledge graph and writes it to `.gitnexus/`; it commits nothing. Extra arguments after the path go to `analyze` (the flags below).
+Run from the root of the repository's main clone, never from a worktree, which the script refuses (exit 3). `gitnexus-reindex.sh` parses all source files, builds the knowledge graph and writes it to `.gitnexus/`; it commits nothing. Extra arguments after the path go to `analyze` (the flags below).
 
 | Flag           | Effect                                                           |
 | -------------- | ---------------------------------------------------------------- |

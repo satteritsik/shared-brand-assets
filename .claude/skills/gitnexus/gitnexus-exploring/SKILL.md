@@ -23,7 +23,7 @@ description: "Use when the user asks how code works, wants to understand archite
 5. READ gitnexus://repo/{name}/process/{name}      → Trace full execution flow
 ```
 
-> If step 2 says "Index is stale" → run `ops/indexing/gitnexus-reindex.sh .` in the terminal, from the repository root.
+> If step 2 says "Index is stale" → run `ops/indexing/gitnexus-reindex.sh .` in the terminal, from the root of the repository's main clone, never from a worktree, which the script refuses.
 
 ## Checklist
 
