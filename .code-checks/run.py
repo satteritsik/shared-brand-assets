@@ -422,6 +422,21 @@ def cdk_app_folder(cdk_json: str) -> Path | None:
     return ((TREE / cdk_json).parent / command.split()[-1]).resolve().parent
 
 
+def present_apps(spec: Spec) -> list[str]:
+    """Return the spec's CDK apps whose `cdk.json` still exists in the tree.
+
+    The spec is written at sync time, so a change that deletes an app leaves it named there.
+
+    Args:
+        spec: The spec.
+
+    Returns:
+        The `cdk.json` paths that exist, in the spec's order.
+
+    """
+    return [app for app in spec.cdk_apps if (TREE / app).is_file()]
+
+
 def apps_for(path: Path, spec: Spec) -> list[str]:
     """Return the CDK apps a changed file belongs to.
 
@@ -438,15 +453,17 @@ def apps_for(path: Path, spec: Spec) -> list[str]:
 
     """
     if path.name in spec.cdk_app_files:
-        return [app for app in spec.cdk_apps if (TREE / app).parent.resolve() == path.parent]
-    return [app for app in spec.cdk_apps if (folder := cdk_app_folder(app)) is not None and path.is_relative_to(folder)]
+        return [app for app in present_apps(spec) if (TREE / app).parent.resolve() == path.parent]
+    return [
+        app for app in present_apps(spec) if (folder := cdk_app_folder(app)) is not None and path.is_relative_to(folder)
+    ]
 
 
 def apps_for_files(mode: str, files: Sequence[str], spec: Spec) -> list[str]:
     """Return the CDK apps a set of changed files belongs to, in the spec's order.
 
     Args:
-        mode: `edit`, `commit` or `all`; `all` takes every app.
+        mode: `edit`, `commit` or `all`; `all` takes every app that exists.
         files: The changed files relative to the tree.
         spec: The spec.
 
@@ -455,9 +472,9 @@ def apps_for_files(mode: str, files: Sequence[str], spec: Spec) -> list[str]:
 
     """
     if mode == "all":
-        return list(spec.cdk_apps)
+        return present_apps(spec)
     touched: set[str] = {app for rel in files for app in apps_for((TREE / rel).resolve(), spec)}
-    return [app for app in spec.cdk_apps if app in touched]
+    return [app for app in present_apps(spec) if app in touched]
 
 
 def cdk_nag_check(apps: Sequence[str]) -> list[Outcome]:
