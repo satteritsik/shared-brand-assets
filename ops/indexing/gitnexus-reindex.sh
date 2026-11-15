@@ -6,8 +6,10 @@
 # generated runner falls back to `gitnexus@latest`. Copying `gitnexus-run.cjs`
 # over it keeps that route on the version in `gitnexus-version`.
 #
-# When the repository's `.gitnexusrc` sets `"embeddings": true`, `--embeddings`
-# is added unless the caller already chose an embeddings option.
+# When the repository's `.gitnexusrc` sets `"embeddings": true`, the run is a
+# full rebuild that regenerates every embedding, because the GitNexus version in
+# `gitnexus-version` corrupts its embedding store whenever a run carries cached
+# embeddings over (incremental or restored), and an incremental run then fails.
 #
 # This script commits nothing and pushes nothing.
 #
@@ -69,8 +71,9 @@ if [ -f "$META" ]; then
     fi
 fi
 
-# A repository whose `.gitnexusrc` asks for embeddings gets `--embeddings` on
-# every run, so new symbols are embedded whichever route starts the re-index.
+# A repository whose `.gitnexusrc` asks for embeddings gets every embedding
+# regenerated on every run, so new symbols are embedded and no cached row is
+# carried over, whichever route starts the re-index.
 EXTRA=()
 if [ -f "${REPO}/.gitnexusrc" ] && grep -qE '"embeddings"[[:space:]]*:[[:space:]]*true' "${REPO}/.gitnexusrc"; then
     WANTS_EMBEDDINGS="yes"
@@ -80,7 +83,7 @@ if [ -f "${REPO}/.gitnexusrc" ] && grep -qE '"embeddings"[[:space:]]*:[[:space:]
         esac
     done
     if [ "$WANTS_EMBEDDINGS" = "yes" ]; then
-        EXTRA+=(--embeddings)
+        EXTRA+=(--force --drop-embeddings --embeddings)
     fi
 fi
 
