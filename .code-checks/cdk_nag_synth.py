@@ -6,10 +6,12 @@ Usage:
 With no `cdk.json` named, every `cdk.json` git tracks in the repository holding the current
 folder is checked. Each app is synthesized in its own process, under the interpreter its
 `cdk.json` `app` command names (the repository's own environment), the way the CDK CLI runs it:
-the app's context from `cdk.json` and `cdk.context.json`, the cloud assembly in a temporary
-folder that is deleted afterwards. Before the app synthesizes, every rule pack the config names
-and the app has not added itself is registered with `aws_cdk.Validations`, so the app's own
-acknowledgements apply. Nothing is deployed and no AWS credentials are used.
+the app's context from `cdk.json` and `cdk.context.json`, with `env` set to `ATW_DEPLOY_ENV` (the
+environment the pipeline names, as `cdk synth --context env=<name>` sets it) when that variable is
+set, the cloud assembly in a temporary folder that is deleted afterwards. Before the app
+synthesizes, every rule pack the config names and the app has not added itself is registered
+with `aws_cdk.Validations`, so the app's own acknowledgements apply.
+Nothing is deployed and no AWS credentials are used.
 
 Exit status: 0 when no app has a finding at a level the config fails on, 1 otherwise, and 1 when
 an app cannot be synthesized (the reason is printed).
@@ -63,6 +65,8 @@ ACCOUNT_VARIABLE: Final = "CDK_DEFAULT_ACCOUNT"
 REGION_VARIABLE: Final = "CDK_DEFAULT_REGION"
 OUTDIR_VARIABLE: Final = "CDK_OUTDIR"
 CONTEXT_VARIABLE: Final = "CDK_CONTEXT_JSON"
+DEPLOY_ENV_VARIABLE: Final = "ATW_DEPLOY_ENV"
+ENV_CONTEXT_KEY: Final = "env"
 LEVELS: Final = frozenset({"error", "warning", "info"})
 ACKNOWLEDGE_HINT: Final = "acknowledge with Validations.of(<construct>).acknowledge(id=..., reason=...)"
 PROGRAM_DESCRIPTION: Final = "Run cdk-nag on CDK apps by synthesizing them."
@@ -365,7 +369,8 @@ def read_app(cdk_json: Path) -> CdkApp:
         cdk_json: The app's `cdk.json`.
 
     Returns:
-        The app, with the context of `cdk.json` and `cdk.context.json` merged.
+        The app, with the context of `cdk.json` and `cdk.context.json` merged and `env` set to
+        `ATW_DEPLOY_ENV` when that variable is set.
 
     Raises:
         CheckError: If the file is malformed or the app is not a Python script.
@@ -385,6 +390,9 @@ def read_app(cdk_json: Path) -> CdkApp:
     if context_file.is_file():
         context.update(_read_json_object(context_file))
     context[REPORT_JSON_CONTEXT_KEY] = True
+    deploy_environment: str = os.environ.get(DEPLOY_ENV_VARIABLE, "").strip()
+    if deploy_environment:
+        context[ENV_CONTEXT_KEY] = deploy_environment
     return CdkApp(
         folder=cdk_json.parent.resolve(),
         interpreter=command[0],
@@ -773,6 +781,18 @@ def _display_name(cdk_json: Path) -> str:
     return str(relative if relative is not None else cdk_json)
 
 
+def _environment_hint() -> str:
+    """Name the missing deploy environment, for a synthesis failure without it.
+
+    Returns:
+        A note that `ATW_DEPLOY_ENV` is unset, or an empty string when it is set.
+
+    """
+    if os.environ.get(DEPLOY_ENV_VARIABLE, "").strip():
+        return ""
+    return f" ({DEPLOY_ENV_VARIABLE} is unset, so the app was given no `{ENV_CONTEXT_KEY}` context)"
+
+
 def check_app_in_process(cdk_json: Path, config: NagConfig) -> tuple[int, str]:
     """Synthesize one app here and report its findings.
 
@@ -794,7 +814,7 @@ def check_app_in_process(cdk_json: Path, config: NagConfig) -> tuple[int, str]:
         findings: list[Finding] = read_findings(outcome.report)
         lookups_missing: bool = missing_context(outcome.manifest)
     if not findings and outcome.error is not None:
-        message: str = f"{name}: synthesis failed: {outcome.error.splitlines()[0]}"
+        message: str = f"{name}: synthesis failed: {outcome.error.splitlines()[0]}{_environment_hint()}"
         raise CheckError(message)
     if lookups_missing:
         message = f"{name}: the app looks up context at synth; commit {CDK_CONTEXT_JSON_NAME} for deterministic synth"
