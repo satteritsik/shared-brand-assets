@@ -99,8 +99,11 @@ producer -> chassis event helper -> shared-apiClient-lib -> POST /v1/events (cen
 
 1. **Register the event type.** Because the registry is closed-world, the producer's own stack
    writes one SSM parameter per event type before first publication, at
-   `/skillSpoke/{serviceName}/eventRegistry/{seg1}/{seg2}/{seg3}[/{seg4}]` (each dot segment of the
-   event type as one camelCase path segment), with the value `{piiPresent}`. Because the entry
+   `/skillSpoke/{domain}/eventRegistry/{seg1}/{seg2}/{seg3}[/{seg4}]` (each dot segment of the
+   event type as one camelCase path segment), with the value `{piiPresent}`. `{domain}` is the
+   producer's domain token (`viewSets` for `skillSpoke-viewSets-service`), never the repository or
+   stack name; build the name with the project's naming command (`printenv ATW_NAMING_COMMAND`,
+   `name build ssm-parameter`), which is the authority for it. Because the entry
    lives in the producer's stack, a new event type needs no deployment of
    `shared-events-service`.
 2. **Classify the payload model.** Because the registry's `piiPresent` is derived at synth from
