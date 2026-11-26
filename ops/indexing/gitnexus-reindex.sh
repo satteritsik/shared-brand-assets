@@ -13,13 +13,13 @@
 #
 # This script commits nothing and pushes nothing.
 #
-# Only a repository's main clone is indexed. A linked git worktree is refused:
-# it would register a second repository under the same name as its main clone,
+# Only a repository's primary clone is indexed. A linked git worktree is refused:
+# it would register a second repository under the same name as its primary clone,
 # and the GitNexus group sync fails on duplicate names.
 #
 # Usage: gitnexus-reindex.sh <repository path> [gitnexus analyze arguments...]
 # Exit:  2 on a bad argument, 3 when the path is a linked worktree and not a
-#        main clone, else the status of `gitnexus analyze`.
+#        primary clone, else the status of `gitnexus analyze`.
 
 set -euo pipefail
 
@@ -36,8 +36,8 @@ if [ ! -d "${REPO}/.git" ] && [ ! -f "${REPO}/.git" ]; then
     exit 2
 fi
 
-# A main clone's git directory is `<top>/.git`; a linked worktree's lives under
-# the main clone's `.git/worktrees/`. The same check gates the re-index git hook
+# A primary clone's git directory is `<top>/.git`; a linked worktree's lives under
+# the primary clone's `.git/worktrees/`. The same check gates the re-index git hook
 # in `gitnexus-fleet.py`.
 if ! TOP="$(git -C "$REPO" rev-parse --show-toplevel)"; then
     echo "gitnexus-reindex: cannot find the repository top of: ${REPO}" >&2
@@ -48,7 +48,7 @@ if ! GIT_DIR_ABS="$(git -C "$TOP" rev-parse --absolute-git-dir)"; then
     exit 2
 fi
 if [ "$GIT_DIR_ABS" != "${TOP}/.git" ]; then
-    echo "gitnexus-reindex: ${TOP} is a linked git worktree, not a main clone. Worktrees are never indexed; the repository's main clone is." >&2
+    echo "gitnexus-reindex: ${TOP} is a linked git worktree, not a primary clone. Worktrees are never indexed; the repository's primary clone is." >&2
     exit 3
 fi
 
