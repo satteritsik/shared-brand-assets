@@ -13,10 +13,10 @@
 # stops and names the install command, so no index is written by a version the
 # MCP server cannot read.
 #
-# Only a repository's main clone is ever registered. `analyze` and `index`
+# Only a repository's primary clone is ever registered. `analyze` and `index`
 # register their target (each directory argument, or the working directory when
 # none is given); when a target is inside a linked git worktree they are refused,
-# because the worktree would be registered under its main clone's name and the
+# because the worktree would be registered under its primary clone's name and the
 # GitNexus group sync fails on duplicate names.
 #
 # Usage: gitnexus-pinned.sh <gitnexus arguments...>
@@ -35,7 +35,7 @@ refuse_worktree() {
     fi
     common_dir="$(git -C "$target" rev-parse --path-format=absolute --git-common-dir)"
     if [ "$git_dir" != "$common_dir" ]; then
-        echo "gitnexus-pinned: ${target} is inside a linked git worktree; GitNexus never registers a worktree. Run it from the main clone: $(dirname "$common_dir")" >&2
+        echo "gitnexus-pinned: ${target} is inside a linked git worktree; GitNexus never registers a worktree. Run it from the primary clone: $(dirname "$common_dir")" >&2
         exit 3
     fi
 }
