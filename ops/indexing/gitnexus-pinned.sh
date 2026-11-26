@@ -13,11 +13,49 @@
 # stops and names the install command, so no index is written by a version the
 # MCP server cannot read.
 #
+# Only a repository's main clone is ever registered. `analyze` and `index`
+# register their target (each directory argument, or the working directory when
+# none is given); when a target is inside a linked git worktree they are refused,
+# because the worktree would be registered under its main clone's name and the
+# GitNexus group sync fails on duplicate names.
+#
 # Usage: gitnexus-pinned.sh <gitnexus arguments...>
-# Exit:  2 when the version file is missing or malformed, 127 when no
-#        `gitnexus` of the pinned version is on PATH, else GitNexus's own status.
+# Exit:  2 when the version file is missing or malformed, 3 when `analyze` or
+#        `index` targets a linked worktree, 127 when no `gitnexus` of the pinned
+#        version is on PATH, else GitNexus's own status.
 
 set -euo pipefail
+
+# Refuse a target inside a linked worktree: its git directory is not the
+# repository's common git directory. A directory outside git is left to GitNexus.
+refuse_worktree() {
+    local target="$1" git_dir common_dir
+    if ! git_dir="$(git -C "$target" rev-parse --absolute-git-dir 2>&1)"; then
+        return 0
+    fi
+    common_dir="$(git -C "$target" rev-parse --path-format=absolute --git-common-dir)"
+    if [ "$git_dir" != "$common_dir" ]; then
+        echo "gitnexus-pinned: ${target} is inside a linked git worktree; GitNexus never registers a worktree. Run it from the main clone: $(dirname "$common_dir")" >&2
+        exit 3
+    fi
+}
+
+case "${1:-}" in
+    analyze | index)
+        targets=()
+        for arg in "${@:2}"; do
+            if [[ "$arg" != -* ]] && [ -d "$arg" ]; then
+                targets+=("$arg")
+            fi
+        done
+        if [ "${#targets[@]}" -eq 0 ]; then
+            targets=("$PWD")
+        fi
+        for target in "${targets[@]}"; do
+            refuse_worktree "$target"
+        done
+        ;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSION_FILE="${SCRIPT_DIR}/gitnexus-version"
